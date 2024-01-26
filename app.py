@@ -10,6 +10,8 @@ import re
 from PIL import Image
 from tkinter import Tk
 from colorama import Fore, Style, init
+import cv2
+import numpy as np
 pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 tessdata_dir_config = '--tessdata-dir "/usr/share/tesseract-ocr/4.00/tessdata"'
 # sudo apt-get install tesseract-ocr-deu
@@ -17,6 +19,7 @@ tessdata_dir_config = '--tessdata-dir "/usr/share/tesseract-ocr/4.00/tessdata"'
 # pip install googlesearch-python requests beautifulsoup4
 # pip install pymupdf pytesseract
 # pip install colorama
+# pip install opencv-python
 
 
 def is_draft(text):
@@ -83,16 +86,26 @@ def extract_text_from_first_page_with_ocr(pdf_path):
     width, height = img.size
 
     # Zuschneiden auf das obere Drittel
-    cropped_img = img.crop((0, 0, width, height // 3))
+    cropped_img = img.crop((0, 0, width, height // 5))
+    cropped_img.save(image_path)
+
+    # Bild einlesen
+    img = cv2.imread(image_path)
+
+    # Vergrößern der Auflösung
+    high_res_img = cv2.resize(img, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+
+    # Verbesserung der Bildqualität (durch Bilateralfilter)
+    improved_img = cv2.bilateralFilter(high_res_img, 9, 75, 75)
 
     # Texterkennung auf dem zugeschnittenen Bild durchführen
-    text = pytesseract.image_to_string(cropped_img, lang='deu', config=tessdata_dir_config)
+    text = pytesseract.image_to_string(improved_img, lang='deu', config=tessdata_dir_config)
 
     # Schließen Sie das PDF-Dokument
     doc.close()
 
     # Löschen Sie das temporäre Bild
-    os.remove(image_path)
+    # os.remove(image_path)
 
     return text
 
@@ -185,6 +198,8 @@ def main():
         name_match = name_pattern.search(text)
         date_match = date_pattern.search(text)
 
+        full_name = None
+
         print(f"Text aus '{pdf_file}':")
         if name_match: 
             name_match = name_match.group().strip()
@@ -201,17 +216,21 @@ def main():
         # Google query
         prefix = "DIN"
         prefix = prefix + " "
-        query = f"beuth.de {prefix}{full_name} - {date_match}"
-        description = search_and_get_html_description(query)
-        cleaned_description = clean_description(description)
-        g_kuerzel, g_datum, g_titel = split_description(cleaned_description)
+        query = None
+        if full_name and date_match:
+            query = f"beuth.de {prefix}{full_name} - {date_match}"
+        if query: 
+            description = search_and_get_html_description(query)
+            if description:
+                cleaned_description = clean_description(description)
+                g_kuerzel, g_datum, g_titel = split_description(cleaned_description)
 
         r.clipboard_clear()
         r.clipboard_append(pdf_file)
         print(f"{Fore.GREEN}"+pdf_file)
         input(f"{Style.RESET_ALL}Enter...")
 
-        if (g_kuerzel is not None) and (g_kuerzel == prefix + name_match) and (g_datum == date_match):
+        if name_match and (g_kuerzel == prefix + name_match) and (g_datum == date_match):
             r.clipboard_clear()
             r.clipboard_append(g_kuerzel)
             print(f"{Fore.BLUE}"+g_kuerzel)

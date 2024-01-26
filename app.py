@@ -206,21 +206,29 @@ def main():
         cleaned_description = clean_description(description)
         g_kuerzel, g_datum, g_titel = split_description(cleaned_description)
 
+        r.clipboard_clear()
+        r.clipboard_append(pdf_file)
+        print(f"{Fore.GREEN}"+pdf_file)
+        input(f"{Style.RESET_ALL}Enter...")
+
         if (g_kuerzel is not None) and (g_kuerzel == prefix + name_match) and (g_datum == date_match):
+            r.clipboard_clear()
             r.clipboard_append(g_kuerzel)
             print(f"{Fore.BLUE}"+g_kuerzel)
-            input("Enter...")
+            input(f"{Style.RESET_ALL}Enter...")
 
-            r.clipboard_append(g_datum)
-            print(g_datum)
-            input("Enter...")
+            r.clipboard_clear()
+            r.clipboard_append(format_date_01_mm_yy(g_datum))
+            print(f"{Fore.BLUE}"+format_date_01_mm_yy(g_datum))
+            input(f"{Style.RESET_ALL}Enter...")
 
+            r.clipboard_clear()
             r.clipboard_append(g_titel)
-            print(g_titel)
-            input("Enter...")
+            print(f"{Fore.BLUE}"+g_titel)
+            input(f"{Style.RESET_ALL}Enter...")
         else:
-            print("Keine Übereinstimmung gefunden.")
-            input("Enter...")
+            print(f"{Fore.RED}"+"Keine Übereinstimmung gefunden.")
+            input(f"{Style.RESET_ALL}Enter...")
 
         print("=" * 50)
 
